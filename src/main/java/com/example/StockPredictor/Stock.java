@@ -13,34 +13,38 @@ import java.util.Scanner;
 public class Stock {
     private String companyName;
     private String stockTicker;
-    private int currentPrice;
+    private double latestPrice;
     private String industry;
     private String companyDescription;
 
-    private String apiKey = "pk_9b9e15de011c4e97872f2aab206d63df";
-    private String rootURL = "https://cloud.iexapis.com/stable/stock/";
-    private String templateEnding = "/quote?token=";
+    // API access details for IEX Real-Time Stock Price API
+    private String iexAPIKey = "pk_9b9e15de011c4e97872f2aab206d63df";
+    private String iexRootURL = "https://cloud.iexapis.com/stable/stock/";
+    private String iexTemplateEnding = "?token=";
 
     public static void main(String[] args) throws IOException {
-        Stock apple = new Stock("aapl");
-        System.out.println(apple.latestPrice("aapl"));
+        Stock tesla = new Stock("tsla");
+        System.out.println(tesla.getCompanyDescription());
     }
-    public Stock() {}
 
-    private Stock(String companyName, String stockTicker, int currentPrice, String industry, String companyDescription) {
-        this.companyName = companyName;
-        this.stockTicker = stockTicker;
-        this.currentPrice = currentPrice;
-        this.industry = industry;
-        this.companyDescription = companyDescription;
-    }
+    // Constructors
+    public Stock() {}
 
     private Stock(String stockTicker) {
         this.stockTicker = stockTicker;
     }
 
-    public String getCompanyName() {
-        return companyName;
+    private Stock(String companyName, String stockTicker, double latestPrice, String industry, String companyDescription) throws IOException {
+        this.companyName = companyName;
+        this.stockTicker = stockTicker;
+        this.latestPrice = latestPrice;
+        this.industry = industry;
+        this.companyDescription = companyDescription;
+    }
+
+    // Getters and setters
+    public String getCompanyName() throws IOException {
+        return getPriceJson(stockTicker).get("companyName").getAsString();
     }
 
     public void setCompanyName(String companyName) {
@@ -48,7 +52,7 @@ public class Stock {
     }
 
     public String getStockTicker() {
-        return stockTicker;
+        return this.stockTicker;
     }
 
     public void setStockTicker(String stockTicker) {
@@ -56,9 +60,47 @@ public class Stock {
     }
 
     public double latestPrice(String stockTicker) throws IOException {
+        return getPriceJson(stockTicker).get("latestPrice").getAsDouble();
+    }
 
-        URL url = new URL(rootURL + stockTicker + templateEnding + apiKey);
+    public String getIndustry() throws IOException {
+        return getMetaJson(stockTicker).get("industry").getAsString();
+    }
 
+    public void setIndustry(String industry) {
+        this.industry = industry;
+    }
+
+    public String getCompanyDescription() throws IOException {
+        return getMetaJson(stockTicker).get("description").getAsString();
+    }
+
+    public void setCompanyDescription(String companyDescription) {
+        this.companyDescription = companyDescription;
+    }
+
+    // Pricing endpoint
+    public JsonObject getPriceJson(String stockTicker) throws IOException {
+        try {
+            URL url = new URL(iexRootURL + stockTicker + "/quote" + iexTemplateEnding + iexAPIKey);
+            return getJsonHelper(url);
+        } catch(IOException ioException) {
+            throw new IOException("IO Exception in Service", ioException);
+        }
+    }
+
+    // Company background data endpoint
+    public JsonObject getMetaJson(String stockTicker) throws IOException {
+        try {
+            URL url = new URL(iexRootURL + stockTicker + "/company" + iexTemplateEnding + iexAPIKey);
+            return getJsonHelper(url);
+        } catch(IOException ioException) {
+            throw new IOException("IO Exception in Service", ioException);
+        }
+    }
+
+    // Helping function to make it easy to parse Json from an endpoint
+    public JsonObject getJsonHelper(URL url) throws IOException {
         try {
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
@@ -73,27 +115,9 @@ public class Stock {
 
             JsonObject jsonObject = jsonElement.getAsJsonObject();
 
-            double price = jsonObject.get("latestPrice").getAsDouble();
-            return price;
-
+            return jsonObject;
         } catch(IOException ioException) {
             throw new IOException("IO Exception in Service", ioException);
         }
-    }
-
-    public String getIndustry() {
-        return industry;
-    }
-
-    public void setIndustry(String industry) {
-        this.industry = industry;
-    }
-
-    public String getCompanyDescription() {
-        return companyDescription;
-    }
-
-    public void setCompanyDescription(String companyDescription) {
-        this.companyDescription = companyDescription;
     }
 }
